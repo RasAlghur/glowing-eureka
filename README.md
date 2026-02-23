@@ -1,0 +1,1 @@
+Wallet Analyzer built on Rust with Moralis API (More features to be added)
