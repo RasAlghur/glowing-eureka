@@ -1,0 +1,5 @@
+- Enter a wallet / mint address
+- fetch the wally buys and sell (txns)
+- if it is a mint address, structure the buys and sell in terms of wallets
+    - first, fetch all the txn
+    - 2nd, arrange them properly by address, no of buys, no of sells, etc 

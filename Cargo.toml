@@ -1,0 +1,12 @@
+[package]
+name = "bagscan_wallet_analyser"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.102"
+colored = "3.1.1"
+dotenv = "0.15.0"
+reqwest = { version = "0.13.2", features = ["blocking", "json"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
