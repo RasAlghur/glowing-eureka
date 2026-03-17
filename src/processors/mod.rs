@@ -6,16 +6,19 @@ use dotenv::dotenv;
 use std::env;
 use anyhow::{Result, anyhow};
 
-pub fn process_account(account_address: &str, account_type: models::AccountType) -> Result<()> {
+pub fn process_account(account_address: &str, account_type: models::AccountType, fetch_duration: u32) -> Result<()> {
     dotenv().ok();
 
     let api_key = env::var("MORALIS_API_KEY")
         .map_err(|_| anyhow!("MORALIS_API_KEY must be set in .env or environment"))?;
 
-    let swap_txns = api_calls::fetch_swap_related_txns(account_address, &api_key, account_type)
+    // PASS `account_type` by value (no `&`)
+    // let swap_txns = api_calls::fetch_swap_related_txns(account_address, &api_key, account_type)
+    let swap_txns = api_calls::fetch_all_swap_related_txns_pages(account_address, &api_key, account_type, fetch_duration)
         .map_err(|e| anyhow!("Fetching swap txns failed: {}", e))?;
 
-    let _swap_results = refiners::refined_get_all_swap_related_txns(&swap_txns);
+    // PASS `account_type` by value (no `&`)
+    let _swap_results = refiners::refined_get_all_swap_related_txns(&swap_txns, account_type);
 
     println!("Successfully fetched and refined swap related transactions for account: {}", account_address);
     Ok(())

@@ -1,9 +1,9 @@
 use serde::{Deserialize};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AccountType {
-    Account,
     Token,
+    Account,
 }
 
 #[derive(Deserialize, Debug)]

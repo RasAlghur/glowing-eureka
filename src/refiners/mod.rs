@@ -34,15 +34,20 @@ pub fn refined_get_token_pair_by_address(response: &models::TokenPairByAddress) 
     })
 }
 
-pub fn refined_get_all_swap_related_txns(response: &models::AllSwapRelatedTxns) -> Vec<models::SwapResult> {
+pub fn refined_get_all_swap_related_txns(response: &models::AllSwapRelatedTxns, account_type: models::AccountType) -> Vec<models::SwapResult> {
     println!("{}", "Swap related transactions:".green());
     for swap in &response.result {
         println!("Transaction Hash: {}", swap.transaction_hash);
-        println!("Wallet Address: {}", swap.wallet_address);
+        match account_type {
+            models::AccountType::Account => {},
+            models::AccountType::Token => println!("Wallet Address: {}", swap.wallet_address),
+        }
         println!("Block Timestamp: {}", swap.block_timestamp);
         println!("Pair Address: {}", swap.pair_address);
         println!("Exchange Address: {}", swap.exchange_address);
+        println!("Token Bought: {} ({}) ", swap.bought.address, swap.bought.symbol);
         println!("Bought: {} {} (USD Price: {:.2} per {})", swap.bought.amount, swap.bought.symbol, swap.bought.usd_price, swap.bought.symbol);
+        println!("Token Sold: {} ({}) ", swap.sold.address, swap.sold.symbol);
         println!("Sold: {} {} (USD Price: {:.2} per {})", swap.sold.amount, swap.sold.symbol, swap.sold.usd_price, swap.sold.symbol);
         println!("Total Value USD: {:.2}", swap.total_value_usd);
         println!("-----------------------------------");

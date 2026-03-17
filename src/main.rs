@@ -67,13 +67,46 @@ fn run_cli() -> Result<()> {
         }
 
         // Minimal validation: optionally you can add more (length, prefix checks, etc.)
+        println!("{}", format!("Scanning {} ...", address).bright_black());
+
+        // ask for duration
+        println!();
+        println!("{}", "Select fetch duration:".yellow());
+        println!("  {} - last 1 day", "1".green());
+        println!("  {} - last 7 days", "7".green());
+        println!("  {} - last 30 days", "30".green());
+        println!("  {} - cancel", "c".red());
+
+        let duration_input = read_trimmed_line("Duration (1/7/30): ")?;
+        if duration_input.to_lowercase() == "c" {
+            println!("{}", "Cancelled scan.".cyan());
+            continue;
+        }
+
+        let fetch_duration: u32 = match duration_input.as_str() {
+            "1" => 1,
+            "7" => 7,
+            "30" => 30,
+            other => {
+                // try to parse numeric fallback (optional)
+                match other.parse::<u32>() {
+                    Ok(n) if n > 0 => n,
+                    _ => {
+                        println!("{}", "Invalid duration — please enter 1, 7, 30 or c.".red());
+                        continue;
+                    }
+                }
+            }
+        };
+
         println!(
             "{}",
-            format!("Scanning {} ...", address).bright_black()
+            format!("Scanning {} for the last {} day(s)...", address, fetch_duration).bright_black()
         );
 
         // Call your existing command (propagate error if it fails)
-        if let Err(e) = commands::scan_account(&address, account_type) {
+        // NOTE: commands::scan_account signature must accept (address, account_type, fetch_duration)
+        if let Err(e) = commands::scan_account(&address, account_type, fetch_duration) {
             println!("{} {}", "Scan failed:".red(), e);
         } else {
             println!("{}", "Scan finished.".green());
@@ -85,7 +118,7 @@ fn run_cli() -> Result<()> {
             println!("{}", "Exiting interactive mode.".cyan());
             break;
         }
-    }
+    } // end loop
 
     Ok(())
 }
