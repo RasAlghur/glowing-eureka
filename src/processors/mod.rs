@@ -1,50 +1,45 @@
+// src/processors/mod.rs
+use crate::api_calls;
+use crate::refiners;
 use crate::models;
-use colored::*;
+use dotenv::dotenv;
+use std::env;
+use anyhow::{Result, anyhow};
 
-pub fn refined_get_token_pair_by_address(response: &models::TokenPairByAddress) -> Result<models::RefinedTokenPairInfo, String> {
-    println!("{}", "Token pair information:".green());
+pub fn process_account(account_address: &str, account_type: models::AccountType) -> Result<()> {
+    dotenv().ok();
 
-    // Get the first pair, if any
-    if let Some(first_pair) = response.pairs.first() {
-        println!("Exchange Address: {}", first_pair.exchange_address);
-        println!("Pair Address: {}", first_pair.pair_address);
+    let api_key = env::var("MORALIS_API_KEY")
+        .map_err(|_| anyhow!("MORALIS_API_KEY must be set in .env or environment"))?;
 
-        // Find the token with pair_token_type == "token0" (adjust the string as needed)
-        let token0 = first_pair.pair.iter().find(|t| t.pair_token_type == "token0");
+    let swap_txns = api_calls::fetch_swap_related_txns(account_address, &api_key, account_type)
+        .map_err(|e| anyhow!("Fetching swap txns failed: {}", e))?;
 
-        match token0 {
-            Some(token) => {
-                println!("  Token Address: {}", token.token_address);
-                println!("  Token Name: {}", token.token_name);
-                println!("  Token Symbol: {}", token.token_symbol);
-            }
-            None => println!("  No token found in this pair."),
-        }
-    } else {
-        println!("No pairs found.");
-    }
+    let _swap_results = refiners::refined_get_all_swap_related_txns(&swap_txns);
 
-    Ok(models::RefinedTokenPairInfo {
-        exchange_address: response.pairs.first().unwrap().exchange_address.clone(),
-        pair_address: response.pairs.first().unwrap().pair_address.clone(),
-        token0_address: response.pairs.first().unwrap().pair.first().unwrap().token_address.clone(),
-        token0_name: response.pairs.first().unwrap().pair.first().unwrap().token_name.clone(),
-        token0_symbol: response.pairs.first().unwrap().pair.first().unwrap().token_symbol.clone(),
-    })
+    println!("Successfully fetched and refined swap related transactions for account: {}", account_address);
+    Ok(())
 }
 
-pub fn refined_get_all_swap_related_txns(response: &models::AllSwapRelatedTxns) -> Vec<models::SwapResult> {
-    println!("{}", "Swap related transactions:".green());
-    for swap in &response.result {
-        println!("Transaction Hash: {}", swap.transaction_hash);
-        println!("Wallet Address: {}", swap.wallet_address);
-        println!("Block Timestamp: {}", swap.block_timestamp);
-        println!("Pair Address: {}", swap.pair_address);
-        println!("Exchange Address: {}", swap.exchange_address);
-        println!("Bought: {} {} (USD Price: {:.2} per {})", swap.bought.amount, swap.bought.symbol, swap.bought.usd_price, swap.bought.symbol);
-        println!("Sold: {} {} (USD Price: {:.2} per {})", swap.sold.amount, swap.sold.symbol, swap.sold.usd_price, swap.sold.symbol);
-        println!("Total Value USD: {:.2}", swap.total_value_usd);
-        println!("-----------------------------------");
-    }
-    response.result.clone()
+pub fn process_tokenPair() -> Result<()> {
+    dotenv().ok();
+
+    let api_key = env::var("MORALIS_API_KEY")
+        .map_err(|_| anyhow!("MORALIS_API_KEY must be set in .env or environment"))?;
+
+    let data = api_calls::get_token_pair_by_address(
+        "AVF9F4C4j8b1Kh4BmNHqybDaHgnZpJ7W7yLvL7hUpump",
+        &api_key,
+    )
+    .map_err(|e| anyhow!("API call failed: {}", e))?;
+
+    let refined = refiners::refined_get_token_pair_by_address(&data)
+        .map_err(|e| anyhow!("Refining token pair failed: {}", e))?;
+
+    println!(
+        "Refined pair: {} ({}) on exchange {}",
+        refined.token0_name, refined.token0_address, refined.exchange_address
+    );
+
+    Ok(())
 }

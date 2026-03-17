@@ -11,7 +11,7 @@ use colored::*;
 // 'https://solana-gateway.moralis.io/account/mainnet/{walletAdd}/swaps?limit=25&order=DESC&transactionTypes=buy%2Csell' \
 // 'https://solana-gateway.moralis.io/token/mainnet/{tokenAdd}/swaps?limit=100&order=DESC&transactionTypes=buy%2Csell' \
 
-pub fn fetch_swap_related_txns(addr: &str, api_key: &str, account_type: models::AccountType, ) -> Result<models::AllSwapRelatedTxns, reqwest::Error> {
+pub fn fetch_swap_related_txns(addr: &str, api_key: &str, account_type: models::AccountType) -> Result<models::AllSwapRelatedTxns, reqwest::Error> {
     let _prompt_text: String = format!("fetching swap related transactions for {}", addr);
     println!("{}", _prompt_text.green());
     

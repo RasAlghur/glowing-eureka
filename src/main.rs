@@ -1,35 +1,97 @@
-// src/mains.rs
-
-use dotenv::dotenv;
-use std::env;
+use colored::*;
+use anyhow::Result;
+use std::io::{self, Write};
 
 pub mod models;
 pub mod utils;
 pub mod api_calls;
+pub mod refiners;
 pub mod processors;
+pub mod commands;
 
-fn main() {
-    dotenv().ok();
+fn read_trimmed_line(prompt: &str) -> io::Result<String> {
+    print!("{}", prompt);
+    io::stdout().flush()?; // ensure prompt appears before reading
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    Ok(input.trim().to_string())
+}
 
-    let api_key: String = env::var("MORALIS_API_KEY")
-        .expect("MORALIS_API_KEY must be set in .env or environment");
+fn choose_account_type_from_input(s: &str) -> Option<models::AccountType> {
+    match s.to_lowercase().as_str() {
+        "1" | "t" | "token" => Some(models::AccountType::Token),
+        "2" | "a" | "account" => Some(models::AccountType::Account),
+        _ => None,
+    }
+}
 
-    let get_token_pair_by_address_result = api_calls::get_token_pair_by_address("AVF9F4C4j8b1Kh4BmNHqybDaHgnZpJ7W7yLvL7hUpump", &api_key);
-    match get_token_pair_by_address_result {
-        Ok(data) => match processors::refined_get_token_pair_by_address(&data) {
-            Ok(refined_data) => match api_calls::fetch_swap_related_txns(&refined_data.token0_address, &api_key, models::AccountType::Token) {
-            // Ok(refined_data) => match api_calls::fetch_swap_related_txns("2U9W9kBvnjisfch6Dp8T4sXG8v2ppuyEp2hVSbm3gxhb", &api_key, models::AccountType::Account) {
-                Ok(_swap_txns) => match processors::refined_get_all_swap_related_txns(&_swap_txns) {
-                    _swap_results => {
-                        println!("Successfully fetched and refined swap related transactions for token: {}", refined_data.token0_name);
-                    }
-                },
-                Err(e) => println!("Error fetching swap related transactions: {}", e),
-            },
-            Err(e) => println!("Error refining token pair info: {}", e),
-        },
-        Err(e) => println!("{:?}", e),
+fn show_menu() {
+    println!();
+    println!("{}", "Please choose an option:".yellow());
+    println!("  {}  - Scan a Token (token swaps)", "1".green());
+    println!("  {}  - Scan an Account/Wallet (account swaps)", "2".green());
+    println!("  {}  - Quit", "q".red());
+}
+
+fn run_cli() -> Result<()> {
+    let welcome_text = format!("Welcome to the Bagscan Wallet Analyser CLI");
+    println!("{}", welcome_text.green());
+    println!("{}", "Interactive mode — choose an option to begin.".bright_black());
+
+    loop {
+        show_menu();
+
+        let choice = read_trimmed_line("> ")?;
+        if choice.to_lowercase() == "q" {
+            println!("{}", "Goodbye!".cyan());
+            break;
+        }
+
+        let account_type = match choose_account_type_from_input(&choice) {
+            Some(t) => t,
+            None => {
+                println!("{}", "Invalid choice — please enter 1, 2, or q.".red());
+                continue;
+            }
+        };
+
+        // ask for address
+        let prompt = match account_type {
+            models::AccountType::Token => "Enter token address: ",
+            models::AccountType::Account => "Enter wallet/account address: ",
+        };
+        let address = read_trimmed_line(prompt)?;
+        if address.is_empty() {
+            println!("{}", "Address cannot be empty. Try again.".red());
+            continue;
+        }
+
+        // Minimal validation: optionally you can add more (length, prefix checks, etc.)
+        println!(
+            "{}",
+            format!("Scanning {} ...", address).bright_black()
+        );
+
+        // Call your existing command (propagate error if it fails)
+        if let Err(e) = commands::scan_account(&address, account_type) {
+            println!("{} {}", "Scan failed:".red(), e);
+        } else {
+            println!("{}", "Scan finished.".green());
+        }
+
+        // after scan, allow user to continue or quit
+        let again = read_trimmed_line("Scan again? (y/n) ")?;
+        if again.to_lowercase().starts_with('n') {
+            println!("{}", "Exiting interactive mode.".cyan());
+            break;
+        }
     }
 
-    println!("Hello, world!");
+    Ok(())
+}
+
+fn main() -> Result<()> {
+    dotenv::dotenv().ok();
+    run_cli()?;
+    Ok(())
 }
